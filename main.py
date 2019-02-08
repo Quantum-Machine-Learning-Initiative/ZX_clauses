@@ -67,7 +67,7 @@ def dense_energy_gap(H):
         # H is fully degenerate otherwise
         return 0
 
-def make_ZX_factory(num_variables, num_clauses_1, k_1, num_clauses_2, k_2):
+def make_ZX_factory(num_variables, num_clauses_1, num_clauses_2, k_1=3, k_2=3):
     '''Creates a function that takes no arguments and spits out
     Hamiltonians with 
     '''
@@ -85,11 +85,26 @@ def make_ZX_factory(num_variables, num_clauses_1, k_1, num_clauses_2, k_2):
         return H
     return factory
 
-def symmetric_ZX_factory(num_variables, num_clauses_1, k_1, num_clauses_2, k_2):
+def symmetric_ZX_factory(num_variables, num_clauses_1, num_clauses_2, k=3):
+    '''Creates a Hamiltonian factory that produces ``symmetric'' SAT
+    Hamiltonians: if the number of Z and X clauses are equal, they
+    coincide, otherwise the first min(num_clauses_1, num_clauses_2)
+    coincide.
     '''
-    dsf
-    '''
-    pass
+    def factory():
+        big_instance = random_SAT_instance(num_variables, np.max([num_clauses_1, num_clauses_2]), k=k)
+        instance_1 = big_instance[:num_clauses_1]
+        instance_2 = big_instance[:num_clauses_2]
+        if num_clauses_2 > 0 and num_clauses_1 > 0:
+            H = make_SAT_Hamiltonian(instance_1, num_variables, pauli_Z) + make_SAT_Hamiltonian(instance_2, num_variables, pauli_X)
+        elif num_clauses_2 > 0:
+            H = make_SAT_Hamiltonian(instance_2, num_variables, pauli_X)
+        elif num_clauses_1 > 0:
+            H = make_SAT_Hamiltonian(instance_1, num_variables, pauli_Z)
+        else:
+            raise ValueError("Empty Hamiltonian")
+        return H
+    return factory
     
 def average_energy_gap(ham_factory, num_instances=100, num_eigs=10):
     '''
@@ -107,7 +122,7 @@ def average_energy_gap(ham_factory, num_instances=100, num_eigs=10):
         except ValueError:
             failures += 1
 
-    print('Failed to find gap {} times'.format(failures))
+    print('{} failures'.format(failures))
 
     if dE_data:
         return np.mean(dE_data)
@@ -171,7 +186,8 @@ if (__name__=='__main__'):
     #            print(e)
     #            data[i, j] = np.nan
     #print(data)
-    f = make_ZX_factory(6, 12, 3, 12, 3)
+    f = symmetric_ZX_factory(6, 50, 10)
     dE = average_energy_gap(f, num_eigs=20)
     print(dE)
-    quit()
+    #print(f())
+    #quit()
