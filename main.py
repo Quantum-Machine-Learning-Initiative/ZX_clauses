@@ -36,8 +36,6 @@ def make_SAT_Hamiltonian(sat_instance, num_bits, pauli=pauli_Z):
         H += reduce(lambda A, B: scipy.sparse.kron(A, B, format="csr"), term_list)
     return H
         
-    
-
 def find_energy_gap(H, num_vals=6):
     '''finds the energy gap of a given Hamiltonian, i.e. the difference
     between the ground state and the first excited state.  Eigenvalue
@@ -119,75 +117,43 @@ def average_energy_gap(ham_factory, num_instances=100, num_eigs=10):
             dE = find_energy_gap(H, num_eigs)
             #dE = 10
             dE_data.append(dE)
-        except ValueError:
+        except Exception as e:
+            #print(e)
             failures += 1
 
     print('{} failures'.format(failures))
 
     if dE_data:
-        return np.mean(dE_data)
+        return np.mean(dE_data), np.var(dE_data)
     else:
         raise ValueError("No convergencies")
-
-#        big_instance = random_SAT_instance(num_variables, np.max(num_clauses_1, num_clauses_2), k = k_1)
-#        instance_1 = big_instance[:num_clauses_1]
-#        instance_2 = big_instance[:num_clauses_2]
-        
-##        instance_1 = random_SAT_instance(num_variables, num_clauses_1, k=k_1)
-##        instance_2 = random_SAT_instance(num_variables, num_clauses_2, k=k_2)
-#        if num_clauses_2 > 0 and num_clauses_1 > 0:
-#            H = make_SAT_Hamiltonian(instance_1, num_variables, pauli_Z) + make_SAT_Hamiltonian(instance_2, num_variables, pauli_X)
-#        elif num_clauses_2 > 0:
-#            H = make_SAT_Hamiltonian(instance_2, num_variables, pauli_X)
-#        elif num_clauses_1 > 0:
-#            H = make_SAT_Hamiltonian(instance_1, num_variables, pauli_Z)
-#        else:
-#            raise ValueError("Empty Hamiltonian")
-#        #print(np.shape(H))
-#        #print(H.nnz)
-#        try:
-#            N = np.shape(H)[0]
-#            if N <= num_eigs:
-#               # print(N)
-#                dE = dense_energy_gap(H.todense())
-#            else:
-#                dE = find_energy_gap(H, num_eigs)                
-#            #n_eigs = np.min(np.shape(H)[0] - 1, num_eigs) 
-#            dE_data.append(dE)
-#
-#            
-#        except ValueError:
-#            failures += 1
-#
-#    print('Failed to find gap {} times'.format(failures))
-#    if dE_data:
-#        return np.mean(dE_data)
-#    else:
-#        raise ValueError("No convergencies")
-#
     
 if (__name__=='__main__'):
     pass
-    #num_variables = 6
-    #num_instances = 25
-    #nz = 10
-    #nx = 10
-    #zs = [4 * i for i in range(nz)]
-    #xs = [4 * i for i in range(nx)]
-    #data = np.zeros((nz, nx))
-    #for i, z in enumerate(zs):
-    #    for j, x in enumerate(xs):
-    #        print(z, x, end=' ')
-    #        try:
-    #            data[i, j] = average_energy_gap(num_variables, z, 3, x, 3,
-    #                                            num_instances=num_instances,
-    #                                            num_eigs=50)
-    #        except ValueError as e:
-    #            print(e)
-    #            data[i, j] = np.nan
-    #print(data)
-    f = symmetric_ZX_factory(6, 50, 10)
-    dE = average_energy_gap(f, num_eigs=20)
-    print(dE)
+    num_variables = 6
+    num_instances = 100
+    cv_max = 10
+    points = np.arange(1, cv_max * num_variables, 4) 
+    data = np.zeros((len(points), len(points)))
+    for i, z in enumerate(points):
+        for j, x in enumerate(points):
+            print(z, x, end=' ')
+            f = make_ZX_factory(num_variables, z, x)
+            try:
+                data[i, j] = average_energy_gap(f, num_instances=num_instances, num_eigs=40)[0]
+            except ValueError as e:
+                print(e)
+                data[i, j] = np.nan
+    print(data)
+    #f = symmetric_ZX_factory(6, 8, 0)
+    #dE = average_energy_gap(f, num_eigs=40, num_instances=20)
+    #print(dE[0])
+    #print(3 * dE[1])
     #print(f())
     #quit()
+    plt.imshow(data, origin='low', extent=([points[0] / num_variables, points[-1] / num_variables] * 2))
+    plt.colorbar()
+    plt.xlabel('C/V (Z)')
+    plt.ylabel('C/V (X)')
+    plt.title('ZX-SAT Hamiltonian')
+    plt.show()
