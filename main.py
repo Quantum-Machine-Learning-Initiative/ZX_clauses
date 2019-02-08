@@ -40,8 +40,10 @@ def make_SAT_Hamiltonian(sat_instance, num_bits, pauli=pauli_Z):
 
 def find_energy_gap(H, num_vals=6):
     '''finds the energy gap of a given Hamiltonian, i.e. the difference
-    between the ground state and the first excited state.
-    Eigenvalue finder can't avoid degenerate eigenvalues (I think), so it will have to look for all lowest eigs until 
+    between the ground state and the first excited state.  Eigenvalue
+    finder can't avoid degenerate eigenvalues (I think), so it will
+    have to look for all lowest eigs until
+
     '''
     w, v = SPLA.eigsh(H, k=num_vals, which="SA")
     w_sorted = sorted(w)
@@ -65,15 +67,11 @@ def dense_energy_gap(H):
         # H is fully degenerate otherwise
         return 0
 
-def average_energy_gap(num_variables, num_clauses_1, k_1,
-                       num_clauses_2, k_2, num_instances=5,
-                       num_eigs=10):
+def make_ZX_factory(num_variables, num_clauses_1, k_1, num_clauses_2, k_2):
+    '''Creates a function that takes no arguments and spits out
+    Hamiltonians with 
     '''
-    Calculate the average energy gap for the ZX clause Hamiltonians
-    '''
-    dE_data = []
-    failures = 0
-    for i in range(num_instances):
+    def factory():
         instance_1 = random_SAT_instance(num_variables, num_clauses_1, k=k_1)
         instance_2 = random_SAT_instance(num_variables, num_clauses_2, k=k_2)
         if num_clauses_2 > 0 and num_clauses_1 > 0:
@@ -84,45 +82,96 @@ def average_energy_gap(num_variables, num_clauses_1, k_1,
             H = make_SAT_Hamiltonian(instance_1, num_variables, pauli_Z)
         else:
             raise ValueError("Empty Hamiltonian")
-        #print(np.shape(H))
-        #print(H.nnz)
-        try:
-            N = np.shape(H)[0]
-            if N <= num_eigs:
-               # print(N)
-                dE = dense_energy_gap(H.todense())
-            else:
-                dE = find_energy_gap(H, num_eigs)                
-            #n_eigs = np.min(np.shape(H)[0] - 1, num_eigs) 
-            dE_data.append(dE)
+        return H
+    return factory
 
-            
+def symmetric_ZX_factory(num_variables, num_clauses_1, k_1, num_clauses_2, k_2):
+    '''
+    dsf
+    '''
+    pass
+    
+def average_energy_gap(ham_factory, num_instances=100, num_eigs=10):
+    '''
+    Calculate the average energy gap for the ZX clause Hamiltonians
+    '''
+    dE_data = []
+    failures = 0
+    for i in range(num_instances):        
+        H = ham_factory()
+#        print(H)
+        try:
+            dE = find_energy_gap(H, num_eigs)
+            #dE = 10
+            dE_data.append(dE)
         except ValueError:
             failures += 1
 
     print('Failed to find gap {} times'.format(failures))
+
     if dE_data:
         return np.mean(dE_data)
     else:
         raise ValueError("No convergencies")
 
+#        big_instance = random_SAT_instance(num_variables, np.max(num_clauses_1, num_clauses_2), k = k_1)
+#        instance_1 = big_instance[:num_clauses_1]
+#        instance_2 = big_instance[:num_clauses_2]
+        
+##        instance_1 = random_SAT_instance(num_variables, num_clauses_1, k=k_1)
+##        instance_2 = random_SAT_instance(num_variables, num_clauses_2, k=k_2)
+#        if num_clauses_2 > 0 and num_clauses_1 > 0:
+#            H = make_SAT_Hamiltonian(instance_1, num_variables, pauli_Z) + make_SAT_Hamiltonian(instance_2, num_variables, pauli_X)
+#        elif num_clauses_2 > 0:
+#            H = make_SAT_Hamiltonian(instance_2, num_variables, pauli_X)
+#        elif num_clauses_1 > 0:
+#            H = make_SAT_Hamiltonian(instance_1, num_variables, pauli_Z)
+#        else:
+#            raise ValueError("Empty Hamiltonian")
+#        #print(np.shape(H))
+#        #print(H.nnz)
+#        try:
+#            N = np.shape(H)[0]
+#            if N <= num_eigs:
+#               # print(N)
+#                dE = dense_energy_gap(H.todense())
+#            else:
+#                dE = find_energy_gap(H, num_eigs)                
+#            #n_eigs = np.min(np.shape(H)[0] - 1, num_eigs) 
+#            dE_data.append(dE)
+#
+#            
+#        except ValueError:
+#            failures += 1
+#
+#    print('Failed to find gap {} times'.format(failures))
+#    if dE_data:
+#        return np.mean(dE_data)
+#    else:
+#        raise ValueError("No convergencies")
+#
     
 if (__name__=='__main__'):
-    num_variables = 6
-    num_instances = 100
-    nz = 4
-    nx = 4
-    zs = [4 * i for i in range(nz)]
-    xs = [4 * i for i in range(nx)]
-    data = np.zeros((nz, nx))
-    for i, z in enumerate(zs):
-        for j, x in enumerate(xs):
-            print(z, x, end=' ')
-            try:
-                data[i, j] = average_energy_gap(num_variables, z, 3, x, 3,
-                                                num_instances=num_instances,
-                                                num_eigs=50)
-            except ValueError as e:
-                print(e)
-                data[i, j] = np.nan
-    print(data)
+    pass
+    #num_variables = 6
+    #num_instances = 25
+    #nz = 10
+    #nx = 10
+    #zs = [4 * i for i in range(nz)]
+    #xs = [4 * i for i in range(nx)]
+    #data = np.zeros((nz, nx))
+    #for i, z in enumerate(zs):
+    #    for j, x in enumerate(xs):
+    #        print(z, x, end=' ')
+    #        try:
+    #            data[i, j] = average_energy_gap(num_variables, z, 3, x, 3,
+    #                                            num_instances=num_instances,
+    #                                            num_eigs=50)
+    #        except ValueError as e:
+    #            print(e)
+    #            data[i, j] = np.nan
+    #print(data)
+    f = make_ZX_factory(6, 12, 3, 12, 3)
+    dE = average_energy_gap(f, num_eigs=20)
+    print(dE)
+    quit()
